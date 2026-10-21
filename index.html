@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>6 Малгайн сэтгэхүй - Realtime Classroom</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800;900&family=Roboto:wght@400;500;700;900&display=swap&subset=cyrillic,cyrillic-ext');
+    
+    * {
+      font-family: 'Roboto', 'Noto Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif !important;
+    }
+
+    body {
+      background: #f1f5f9;
+      color: #0f172a;
+    }
+
+    .light-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
+    }
+
+    .modal-enter {
+      animation: modalFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.96) translateY(8px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-start p-3 md:p-6 select-none">
+
+  <!-- Header -->
+  <header class="w-full max-w-6xl flex items-center justify-between py-3 mb-5 border-b border-slate-200">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-md shadow-indigo-600/20">
+        <i class="ph-bold ph-graduation-cap text-2xl text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-lg md:text-xl font-extrabold text-slate-900 tracking-tight">Малгайн сэтгэхүй</h1>
+        <p class="text-xs text-slate-500 font-medium">Багийн хуваарилалт, дэг & ажлын чиглэл[cite: 1]</p>
+      </div>
+    </div>
+
+    <!-- Mode Badge -->
+    <div id="roleBadgeContainer" class="hidden flex items-center gap-2">
+      <span id="roleLabel" class="text-xs font-bold px-3 py-1 rounded-full bg-white text-slate-700 border border-slate-200 shadow-sm"></span>
+      <button onclick="exitToHome()" class="text-xs text-rose-600 hover:text-rose-700 flex items-center gap-1 font-bold px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-100 hover:bg-rose-100 transition-all">
+        <i class="ph-bold ph-sign-out"></i> Гарах
+      </button>
+    </div>
+  </header>
+
+  <!-- VIEW 1: HOME -->
+  <section id="viewHome" class="w-full max-w-xl my-auto py-10 flex flex-col items-center">
+    <div class="text-center mb-8">
+      <h2 class="text-2xl md:text-3xl font-extrabold text-slate-900 mb-2">Хичээлийн танхим</h2>
+      <p class="text-sm text-slate-500 font-medium">Багш самбар дээр өрөө үүсгэх, сурагчид кодоор холбогдоно</p>
+    </div>
+
+    <div class="w-full grid grid-cols-1 md:grid-cols-2 gap-5">
+      <button onclick="showTeacherSetup()" class="light-card hover:border-indigo-500 transition-all p-6 rounded-3xl flex flex-col items-center text-center group">
+        <div class="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
+          <i class="ph-bold ph-chalkboard-teacher"></i>
+        </div>
+        <h3 class="text-base font-extrabold text-slate-800 mb-1">Багшийн самбар</h3>
+        <p class="text-xs text-slate-500 font-medium">Хичээлийн дэг, таймер, сурагчдын нэгдсэн самбар[cite: 1]</p>
+      </button>
+
+      <button onclick="showStudentJoin()" class="light-card hover:border-emerald-500 transition-all p-6 rounded-3xl flex flex-col items-center text-center group">
+        <div class="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
+          <i class="ph-bold ph-device-tablet-camera"></i>
+        </div>
+        <h3 class="text-base font-extrabold text-slate-800 mb-1">Сурагчийн дэлгэц</h3>
+        <p class="text-xs text-slate-500 font-medium">Нэрээ бичиж хүрд эргүүлэх & хариулт бичих[cite: 1]</p>
+      </button>
+    </div>
+  </section>
+
+  <!-- VIEW 2: TEACHER SETUP -->
+  <section id="viewTeacherSetup" class="w-full max-w-md my-auto hidden">
+    <div class="light-card p-6 md:p-8 rounded-3xl">
+      <h3 class="text-xl font-extrabold text-slate-900 mb-4 flex items-center gap-2">
+        <i class="ph-bold ph-gear text-indigo-600"></i> Өрөө нээх
+      </h3>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Сурагчдын тоо оруулах</label>
+          <input type="number" id="setupTotalStudents" value="17" min="5" max="60" oninput="previewQuotas()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-indigo-700 font-black text-xl focus:ring-2 focus:ring-indigo-500 outline-none" />
+          
+          <div id="quotaPreviewNote" class="mt-2 text-xs bg-indigo-50 text-indigo-900 p-3 rounded-xl border border-indigo-100 font-semibold leading-relaxed">
+            <!-- Динамикаар өөрчлөгдөнө -->
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Өрөөний 4 оронтой код</label>
+          <div class="flex items-center gap-2">
+            <input type="text" id="setupRoomCode" maxlength="4" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-center tracking-widest text-indigo-600 font-black text-2xl uppercase outline-none" readonly />
+            <button onclick="generateRoomCode()" class="p-3 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 text-lg transition-colors">
+              <i class="ph-bold ph-arrows-clockwise"></i>
+            </button>
+          </div>
+        </div>
+
+        <button onclick="startTeacherDashboard()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm shadow-md shadow-indigo-600/20 transition-all flex items-center justify-center gap-2">
+          <span>Самбарыг нээх</span>
+          <i class="ph-bold ph-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- VIEW 3: STUDENT JOIN -->
+  <section id="viewStudentJoin" class="w-full max-w-md my-auto hidden">
+    <div class="light-card p-6 md:p-8 rounded-3xl">
+      <h3 class="text-xl font-extrabold text-slate-900 mb-4 flex items-center gap-2">
+        <i class="ph-bold ph-sign-in text-emerald-600"></i> Өрөөнд нэвтрэх
+      </h3>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Самбар дээрх 4 оронтой код</label>
+          <input type="text" id="joinRoomCode" maxlength="4" placeholder="1234" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-center tracking-widest text-indigo-600 font-black text-2xl uppercase outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Өөрийн нэр</label>
+          <input type="text" id="joinStudentName" placeholder="Жишээ: Анужин, Бат, Тэмүүлэн..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold text-base outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+
+        <button onclick="connectStudentToRoom()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2">
+          <span>Хүрд эргүүлэх цонх руу орох</span>
+          <i class="ph-bold ph-play"></i>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- VIEW 4: TEACHER DASHBOARD (САМБАР) -->
+  <section id="viewTeacherDashboard" class="w-full max-w-6xl hidden space-y-5">
+    <div class="light-card p-4 rounded-2xl flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <span class="text-xs uppercase font-extrabold text-slate-500 tracking-wider">Сурагчид орох код:</span>
+        <span id="dashboardRoomCodeBadge" class="text-2xl font-black text-indigo-600 bg-indigo-50 border border-indigo-200 px-4 py-1 rounded-xl tracking-widest font-mono">----</span>
+      </div>
+      
+      <div class="flex items-center gap-2.5 text-xs font-bold">
+        <button onclick="toggleRulesSection()" class="px-3.5 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-xl hover:bg-indigo-100 transition-all flex items-center gap-1.5 shadow-sm">
+          <i class="ph-bold ph-book-open-text text-base"></i>
+          <span>Хичээлийн дэг харах/нуух[cite: 1]</span>
+        </button>
+
+        <span id="dashboardStats" class="bg-slate-100 text-slate-700 px-3.5 py-2 rounded-xl border border-slate-200">Хуваарилагдсан: 0 / 0</span>
+
+        <button onclick="resetRoomData()" class="px-3 py-2 bg-rose-50 text-rose-600 border border-rose-200 rounded-xl hover:bg-rose-100 transition-colors">
+          Цэвэрлэх
+        </button>
+      </div>
+    </div>
+
+    <!-- ДЭГ -->
+    <div id="classroomRulesCard" class="light-card rounded-2xl p-5 border-2 border-indigo-100 bg-gradient-to-br from-white via-indigo-50/20 to-slate-50">
+      <div class="flex flex-wrap items-center justify-between gap-3 pb-3 mb-4 border-b border-indigo-100">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-lg shadow-sm">
+            <i class="ph-bold ph-clipboard-text"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-extrabold text-slate-900 uppercase tracking-tight">Баримтлах үндсэн зарчим ба дэг</h3>
+            <p class="text-xs text-slate-500 font-medium">Хичээлийн үйл ажиллагаанд баримтлах үндсэн хуваарь, шаардлага[cite: 1]</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-indigo-200 shadow-sm">
+          <div class="flex items-center gap-1.5 mr-1 text-slate-700 font-mono font-black text-base" id="timerDisplay">
+            <i class="ph-bold ph-timer text-indigo-600 text-lg"></i>
+            <span>05:00</span>
+          </div>
+          <button onclick="startTimer(5)" class="text-[11px] font-bold px-2 py-1 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200">5 мин</button>
+          <button onclick="startTimer(2)" class="text-[11px] font-bold px-2 py-1 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200">2 мин</button>
+          <button onclick="toggleTimer()" id="timerControlBtn" class="text-[11px] font-bold px-2.5 py-1 rounded bg-indigo-600 text-white hover:bg-indigo-700">Эхлэх</button>
+          <button onclick="resetTimer()" class="text-[11px] font-bold p-1 rounded hover:bg-slate-100 text-slate-500">
+            <i class="ph-bold ph-arrow-counter-clockwise"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center gap-2 text-indigo-600 font-bold text-xs uppercase mb-1">
+              <i class="ph-bold ph-hourglass-high text-base"></i>
+              <span>Судлах цаг (5 мин)</span>
+            </div>
+            <p class="text-xs text-slate-600 font-medium leading-relaxed">
+              Баг бүр өөрсдөд нь өгөгдсөн кейс болон асуултуудыг яг 5 минутад багаараа судалж, танилцуулгаа бэлтгэнэ[cite: 1].
+            </p>
+          </div>
+          <span class="inline-block mt-2 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md w-fit">Багийн ажил</span>
+        </div>
+
+        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center gap-2 text-indigo-600 font-bold text-xs uppercase mb-1">
+              <i class="ph-bold ph-presentation-chart text-base"></i>
+              <span>Илтгэх цаг (2 мин)</span>
+            </div>
+            <p class="text-xs text-slate-600 font-medium leading-relaxed">
+              Баг бүр өөрийн малгайн онцлогт тохирсон дүн шинжилгээгээ 2 минутад багтаан ангид танилцуулна[cite: 1].
+            </p>
+          </div>
+          <span class="inline-block mt-2 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md w-fit">Танилцуулга</span>
+        </div>
+
+        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center gap-2 text-indigo-600 font-bold text-xs uppercase mb-1">
+              <i class="ph-bold ph-note-pencil text-base"></i>
+              <span>Тэмдэглэл хөтлөх</span>
+            </div>
+            <p class="text-xs text-slate-600 font-medium leading-relaxed">
+              Бусад багийг танилцуулж байх хооронд сурагчид анхааралтай сонсож, гол санааг ажлын хуудсандаа тэмдэглэнэ[cite: 1].
+            </p>
+          </div>
+          <span class="inline-block mt-2 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md w-fit">Хувийн тэмдэглэл</span>
+        </div>
+
+        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center gap-2 text-indigo-600 font-bold text-xs uppercase mb-1">
+              <i class="ph-bold ph-ear text-base"></i>
+              <span>Анхааралтай суух</span>
+            </div>
+            <p class="text-xs text-slate-600 font-medium leading-relaxed">
+              Хичээлийн үеэр чимээгүй, анхааралтай сууж, бусад багийн санал бодлыг хүндэтгэнэ[cite: 1].
+            </p>
+          </div>
+          <span class="inline-block mt-2 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md w-fit">Хүндэтгэл</span>
+        </div>
+
+        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center gap-2 text-emerald-600 font-bold text-xs uppercase mb-1">
+              <i class="ph-bold ph-sparkle text-base"></i>
+              <span>Идэвхитэй оролцох</span>
+            </div>
+            <p class="text-xs text-slate-600 font-medium leading-relaxed">
+              Хэлэлцүүлэг, асуулт хариултад өөрийн малгайн өнцгөөс чөлөөтэй, идэвх санаачилгатай оролцоно.
+            </p>
+          </div>
+          <span class="inline-block mt-2 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md w-fit">Оролцоо</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5 Багийн карт (Цагаан, Шар, Хар, Ногоон, Цэнхэр) -->
+    <div id="teacherHatsGrid" class="grid grid-cols-1 md:grid-cols-5 gap-3.5 items-start"></div>
+  </section>
+
+  <!-- VIEW 5: STUDENT DEVICE -->
+  <section id="viewStudentDevice" class="w-full max-w-md my-auto hidden flex flex-col items-center">
+    <div class="light-card w-full p-6 rounded-3xl flex flex-col items-center text-center relative">
+      
+      <div class="flex items-center justify-between w-full mb-4 pb-3 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+          <i class="ph-bold ph-user text-indigo-600"></i>
+          <span id="deviceStudentNameDisplay" class="font-extrabold text-slate-800 text-base">---</span>
+        </div>
+        <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-mono font-bold" id="deviceRoomCodeDisplay">Өрөө: ----</span>
+      </div>
+
+      <!-- State A: Wheel -->
+      <div id="studentSpinArea" class="flex flex-col items-center">
+        <div class="relative flex items-center justify-center my-2">
+          <div class="absolute -top-3.5 z-20 flex flex-col items-center">
+            <div class="w-6 h-8 bg-amber-400 rounded-b-full shadow-md flex items-center justify-center border-2 border-white">
+              <div class="w-2 h-2 rounded-full bg-slate-900"></div>
+            </div>
+          </div>
+
+          <canvas id="studentWheelCanvas" width="310" height="310" class="rounded-full shadow-lg border-4 border-slate-200"></canvas>
+
+          <button id="studentSpinBtn" onclick="studentExecuteSpin()" class="absolute z-10 w-16 h-16 rounded-full bg-indigo-600 hover:bg-indigo-700 border-4 border-white shadow-xl flex items-center justify-center text-white font-extrabold text-xs uppercase transition-transform active:scale-90">
+            Эргүүл
+          </button>
+        </div>
+        <p class="text-xs text-slate-500 font-medium mt-3">Хүрдээ эргүүлж өөрийн багийн малгайн өнгийг аваарай!</p>
+      </div>
+
+      <!-- State B: Result -->
+      <div id="studentResultArea" class="w-full hidden flex-col items-center py-2">
+        <div id="studentResultBadge" class="w-20 h-20 rounded-3xl flex items-center justify-center text-4xl mb-3 shadow-md">
+          <i id="studentResultIcon" class="ph-bold ph-check"></i>
+        </div>
+        
+        <span class="text-[11px] uppercase font-bold tracking-wider text-slate-400">Танд оногдсон баг:</span>
+        <h3 id="studentResultHatName" class="text-2xl font-black text-slate-900 mt-0.5 mb-1">---</h3>
+        <p id="studentResultSubtitle" class="text-xs text-slate-500 font-medium mb-4 px-2">---[cite: 1]</p>
+
+        <div class="w-full bg-amber-50 border border-amber-200 rounded-2xl p-3 mb-5 text-left flex items-start gap-2.5">
+          <i class="ph-fill ph-chair text-amber-600 text-xl shrink-0 mt-0.5"></i>
+          <p class="text-xs text-amber-900 font-medium leading-relaxed">
+            Та багийнхантайгаа нэг дор очиж суудалдаа сууна уу. Бэлэн болмогц доорх өнгөнүүдээс сонгож ажлын чиглэлээ үзэн, хариултаа бичээрэй[cite: 1].
+          </p>
+        </div>
+      </div>
+
+      <!-- 5 Өнгийн сонгох хэсэг -->
+      <div class="w-full pt-4 border-t border-slate-100">
+        <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2.5 text-left flex items-center justify-between">
+          <span>Багийн ажлын чиглэл & Асуултанд хариулах[cite: 1]</span>
+          <span class="text-slate-400 font-normal">Өнгө сонгох</span>
+        </div>
+        
+        <div class="grid grid-cols-5 gap-1.5">
+          <button onclick="openHatQuestions('blue')" class="flex flex-col items-center p-2 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-all">
+            <span class="w-3.5 h-3.5 rounded-full bg-blue-600 mb-1"></span>
+            <span class="text-[10px] font-bold text-blue-900">Цэнхэр</span>
+          </button>
+
+          <button onclick="openHatQuestions('white')" class="flex flex-col items-center p-2 rounded-xl border border-slate-300 bg-slate-100 hover:bg-slate-200 transition-all">
+            <span class="w-3.5 h-3.5 rounded-full bg-white border border-slate-400 mb-1"></span>
+            <span class="text-[10px] font-bold text-slate-800">Цагаан</span>
+          </button>
+
+          <button onclick="openHatQuestions('black')" class="flex flex-col items-center p-2 rounded-xl border border-slate-400 bg-slate-800 text-white hover:bg-slate-900 transition-all">
+            <span class="w-3.5 h-3.5 rounded-full bg-white mb-1"></span>
+            <span class="text-[10px] font-bold text-white">Хар</span>
+          </button>
+
+          <button onclick="openHatQuestions('yellow')" class="flex flex-col items-center p-2 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 transition-all">
+            <span class="w-3.5 h-3.5 rounded-full bg-amber-400 mb-1"></span>
+            <span class="text-[10px] font-bold text-amber-950">Шар</span>
+          </button>
+
+          <button onclick="openHatQuestions('green')" class="flex flex-col items-center p-2 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-all">
+            <span class="w-3.5 h-3.5 rounded-full bg-emerald-600 mb-1"></span>
+            <span class="text-[10px] font-bold text-emerald-950">Ногоон</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- MODAL: АСУУЛТУУДЫН ЦОНХ & ХАРИУЛТ БИЧИХ ТАЛБАРУУД -->
+  <div id="guideQuestionsModal" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-900/50 backdrop-blur-sm hidden">
+    <div class="light-card w-full max-w-2xl max-h-[92vh] rounded-3xl overflow-hidden shadow-2xl flex flex-col modal-enter">
+      
+      <div id="modalHeaderBg" class="p-5 flex items-start justify-between border-b border-slate-100">
+        <div class="flex items-center gap-3">
+          <div id="modalHatIcon" class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-sm"></div>
+          <div>
+            <h3 id="modalHatTitle" class="text-xl font-extrabold text-slate-900"></h3>
+            <p id="modalHatSubtitle" class="text-xs text-slate-500 font-medium mt-0.5"></p>
+          </div>
+        </div>
+        <button onclick="closeQuestionsModal()" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors">
+          <i class="ph-bold ph-x text-lg"></i>
+        </button>
+      </div>
+
+      <div class="p-5 md:p-6 overflow-y-auto space-y-5">
+        <div class="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-4">
+          <div class="text-xs font-bold uppercase tracking-wider text-indigo-700 mb-1 flex items-center gap-1.5">
+            <i class="ph-bold ph-target"></i> Багийн үндсэн зорилго
+          </div>
+          <p id="modalGoalText" class="text-sm text-slate-700 leading-relaxed font-semibold"></p>
+        </div>
+
+        <div>
+          <div class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
+            <i class="ph-bold ph-pencil-simple-line"></i> Чиглүүлсэн асуултууд ба танай багийн хариулт[cite: 1]
+          </div>
+          <div id="modalQuestionsList" class="space-y-4"></div>
+        </div>
+      </div>
+
+      <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+        <span id="saveStatusNote" class="text-xs text-emerald-600 font-medium">Хариултаа бичээд хадгална уу.</span>
+        <div class="flex gap-2">
+          <button onclick="saveStudentAnswers()" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5">
+            <i class="ph-bold ph-floppy-disk"></i> Хариултаа хадгалах
+          </button>
+          <button onclick="closeQuestionsModal()" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md transition-all">
+            Хаах / Буцах
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const AudioEngine = {
+      ctx: null,
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+      },
+      tick() {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(650, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(150, this.ctx.currentTime + 0.04);
+        gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.04);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.04);
+      },
+      win() {
+        if (!this.ctx) return;
+        [440, 554.37, 659.25, 880].forEach((freq, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime + i * 0.1);
+          gain.gain.setValueAtTime(0.15, this.ctx.currentTime + i * 0.1);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + i * 0.1 + 0.35);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(this.ctx.currentTime + i * 0.1);
+          osc.stop(this.ctx.currentTime + i * 0.1 + 0.35);
+        });
+      },
+      alarm() {
+        if (!this.ctx) return;
+        [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.15);
+          gain.gain.setValueAtTime(0.1, this.ctx.currentTime + idx * 0.15);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + idx * 0.15 + 0.3);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(this.ctx.currentTime + idx * 0.15);
+          osc.stop(this.ctx.currentTime + idx * 0.15 + 0.3);
+        });
+      }
+    };
+  </script>
+
+  <script>
+    const HATS_META = {
+      blue: {
+        id: 'blue',
+        name: 'Цэнхэр малгай',
+        subtitle: 'Дүгнэлт, үйл явцын удирдлага ба шийдвэр[cite: 1]',
+        color: '#2563eb',
+        textColor: '#ffffff',
+        badgeClass: 'bg-blue-600 text-white',
+        icon: 'ph-compass',
+        goal: 'Бүх малгайн саналыг нэгтгэн дүгнэж, цаашид хэрэгжүүлэх бодит шийдвэр, үйл ажиллагааны чигийг тодорхойлох[cite: 1].',
+        questions: [
+          'Бүх баримт, эрсдэл, давуу талуудыг сонссоны дараа бид "Canva Pro 30,000₮ гэсэн зар"-ыг дэмжих үү, эсвэл түүнээс татгалзах уу?[cite: 1]',
+          'Бид өөрсдөө цахим орчинд "Тоон оюуны өмч"-ийг дээдэлсэн, хариуцлагатай иргэн байхын тулд яг ямар 3 алхам хийж чадах вэ?[cite: 1]',
+          'Манай сургууль/анги хамт олон албан ёсны боловсролын эрхийг хууль ёсоор авахад бид яаж нөлөөлж, зохион байгуулж чадах вэ?[cite: 1]'
+        ]
+      },
+      white: {
+        id: 'white',
+        name: 'Цагаан малгай',
+        subtitle: 'Баримт, тоо мэдээлэл ба бодит байдал[cite: 1]',
+        color: '#f8fafc',
+        strokeColor: '#94a3b8',
+        textColor: '#0f172a',
+        badgeClass: 'bg-slate-100 text-slate-800 border border-slate-300',
+        icon: 'ph-file-text',
+        goal: 'Сэтгэл хөдлөл, хувийн таамаглалгүйгээр зөвхөн баримт, тоо мэдээлэл, албан ёсны дүрмийг тодорхойлох[cite: 1].',
+        questions: [
+          'Canva-ийн албан ёсны цахим хуудас (canva.com) дээр жилийн эрх нь яг ямар үнэтэй байдаг вэ?[cite: 1]',
+          'Энэхүү зарыг тавьж буй хүн ямар замаар ийм хямд эрхийг зардаг вэ?[cite: 1]',
+          'Canva платформын үйлчилгээний нөхцөл (Terms of Service)-д хувийн болон боловсролын багцыг бусдад дамлан худалдахыг зөвшөөрсөн байдаг уу?[cite: 1]'
+        ]
+      },
+      black: {
+        id: 'black',
+        name: 'Хар малгай',
+        subtitle: 'Эрсдэл, болгоомжлол ба сөрөг үр дагавар[cite: 1]',
+        color: '#1e293b',
+        textColor: '#ffffff',
+        badgeClass: 'bg-slate-800 text-white',
+        icon: 'ph-shield-warning',
+        goal: 'Болзошгүй эрсдэл, сул тал, хууль эрх зүйн болон аюулгүй байдлын асуудлыг шүүмжлэлтэй үнэлэх[cite: 1].',
+        questions: [
+          '30,000 төгрөг төлөөд авах нь хэрэглэгчид өөрт нь ямар эрсдэлтэй вэ?[cite: 1]',
+          'Энэ үйлдэл нь тоон оюуны өмчийн үүднээс бүтээгчид ямар хохирол учруулж байна вэ?[cite: 1]',
+          'Хэрэв багшийн/сургуулийн үнэгүй эрхийг дамлаж байгаа бол энэ нь тухайн сургууль, багшийн нэр хүнд болон бусад жинхэнэ суралцагчдад ямар хор уршигтай вэ?[cite: 1]'
+        ]
+      },
+      yellow: {
+        id: 'yellow',
+        name: 'Шар малгай',
+        subtitle: 'Өөдрөг үзэл, давуу тал ба ашиг тус[cite: 1]',
+        color: '#eab308',
+        textColor: '#422006',
+        badgeClass: 'bg-amber-400 text-amber-950',
+        icon: 'ph-sun',
+        goal: 'Хүмүүс яагаад ийм сонголт хийдэг болох, хэрэглэгчдэд ямар боломж авчирдаг тухай эерэг өнцгөөс харах[cite: 1].',
+        questions: [
+          'Оюутан, сурагчид яагаад албан ёсны үнээр бус ийм зар хайж авдаг вэ?[cite: 1]',
+          'Pro эрх авснаар хүүхдүүд, залуучууд ямар давуу тал, боломжуудыг эдэлдэг вэ?[cite: 1]',
+          'Хямд үнэ нь дижитал хэрэглүүрийг олон хүнд хүртээмжтэй болгоход ямар түлхэц болж байна вэ?[cite: 1]'
+        ]
+      },
+      green: {
+        id: 'green',
+        name: 'Ногоон малгай',
+        subtitle: 'Шинэ санаа, бүтээлч шийдэл ба хувилбарууд[cite: 1]',
+        color: '#10b981',
+        textColor: '#ffffff',
+        badgeClass: 'bg-emerald-600 text-white',
+        icon: 'ph-lightbulb',
+        goal: 'Хууль зөрчихгүйгээр, оюуны өмчийг хүндэтгэн хямд эсвэл үнэгүй ашиглах ямар бүтээлч арга замууд байгааг олох[cite: 1].',
+        questions: [
+          'Хууль бус "30,000₮"-ийн эрх авахын оронд оюутан, сурагчид, багш нар Canva-г үнэгүй бөгөөд хууль ёсоор ашиглах ямар боломж байдаг вэ?[cite: 1]',
+          'Canva-аас өөр ямар хууль ёсны, нээлттэй эхийн үнэгүй дижитал дизайны хэрэгслүүд байна вэ?[cite: 1]',
+          'Энэ төрлийн оюуны өмчийн зөрчилтэй заруудыг таслан зогсоохын тулд сошиал орчинд ямар бүтээлч арга хэмжээ/хөдөлгөөн өрнүүлж болох вэ?[cite: 1]'
+        ]
+      }
+    };
+
+    let currentRole = null;
+    let currentRoomCode = null;
+    let currentStudentName = null;
+    let currentAssignedHat = null;
+    let activeModalHatId = null;
+
+    // ДҮРЭМ: ЦЭНХЭР ЯГ 1, ҮЛДСЭН БҮХ ХҮҮХДҮҮД 4 БАГТ ЖИГД ТЭНЦҮҮ ХУВААГДАНА
+    function generateFairPool(totalCount) {
+      let N = parseInt(totalCount, 10);
+      if (isNaN(N) || N < 5) N = 5;
+
+      const rem = N - 1; // 1 нь цэнхэр
+      const base = Math.floor(rem / 4);
+      const extra = rem % 4;
+
+      const quotas = {
+        blue: 1,
+        white: base,
+        yellow: base,
+        black: base,
+        green: base
+      };
+
+      // Хэрэв тэнцүү хуваагдахгүй үлдэгдэл гарвал 4 өнгөнд ээлжлэн 1, 1-ийг өгч тэнцвэржүүлнэ
+      const keys = ['white', 'yellow', 'black', 'green'];
+      for (let i = 0; i < extra; i++) {
+        quotas[keys[i]]++;
+      }
+
+      // Сан үүсгэх
+      const pool = ['blue'];
+      keys.forEach(k => {
+        for (let i = 0; i < quotas[k]; i++) {
+          pool.push(k);
+        }
+      });
+
+      // Холих (Shuffle)
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+
+      return { pool, quotas, total: N };
+    }
+
+    function previewQuotas() {
+      const val = parseInt(document.getElementById('setupTotalStudents').value, 10) || 17;
+      const res = generateFairPool(val);
+      const q = res.quotas;
+      document.getElementById('quotaPreviewNote').innerHTML = `
+        🔵 Цэнхэр: <b>${q.blue}</b> сурагч <br>
+        ⚪ Цагаан: <b>${q.white}</b> | 🟡 Шар: <b>${q.yellow}</b> | ⚫ Хар: <b>${q.black}</b> | 🟢 Ногоон: <b>${q.green}</b> сурагч
+      `;
+    }
+
+    let roomData = {
+      total: 17,
+      quotas: { blue: 1, white: 4, black: 4, yellow: 4, green: 4 },
+      assignments: { blue: [], white: [], black: [], yellow: [], green: [] },
+      availablePool: []
+    };
+
+    function switchView(viewId) {
+      ['viewHome', 'viewTeacherSetup', 'viewStudentJoin', 'viewTeacherDashboard', 'viewStudentDevice'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+      });
+      document.getElementById(viewId).classList.remove('hidden');
+
+      const roleBadge = document.getElementById('roleBadgeContainer');
+      if (viewId === 'viewTeacherDashboard') {
+        roleBadge.classList.remove('hidden');
+        document.getElementById('roleLabel').textContent = '👨‍🏫 Багшийн самбар';
+      } else if (viewId === 'viewStudentDevice') {
+        roleBadge.classList.remove('hidden');
+        document.getElementById('roleLabel').textContent = `🧑‍🎓 Сурагч: ${currentStudentName}`;
+      } else {
+        roleBadge.classList.add('hidden');
+      }
+    }
+
+    function exitToHome() {
+      currentRole = null;
+      currentRoomCode = null;
+      currentStudentName = null;
+      currentAssignedHat = null;
+      switchView('viewHome');
+    }
+
+    // ================== TEACHER ==================
+    function showTeacherSetup() {
+      generateRoomCode();
+      previewQuotas();
+      switchView('viewTeacherSetup');
+    }
+
+    function generateRoomCode() {
+      const code = Math.floor(1000 + Math.random() * 9000).toString();
+      document.getElementById('setupRoomCode').value = code;
+    }
+
+    function startTeacherDashboard() {
+      const inputVal = parseInt(document.getElementById('setupTotalStudents').value, 10) || 17;
+      const code = document.getElementById('setupRoomCode').value.trim();
+
+      const fair = generateFairPool(inputVal);
+
+      currentRole = 'teacher';
+      currentRoomCode = code;
+
+      roomData = {
+        total: fair.total,
+        quotas: fair.quotas,
+        assignments: { blue: [], white: [], black: [], yellow: [], green: [] },
+        availablePool: fair.pool
+      };
+
+      saveRoomStateToStorage();
+
+      document.getElementById('dashboardRoomCodeBadge').textContent = code;
+      renderTeacherHatsGrid();
+      switchView('viewTeacherDashboard');
+    }
+
+    function toggleRulesSection() {
+      const card = document.getElementById('classroomRulesCard');
+      card.classList.toggle('hidden');
+    }
+
+    function renderTeacherHatsGrid() {
+      const container = document.getElementById('teacherHatsGrid');
+      container.innerHTML = '';
+
+      let totalAssigned = 0;
+      const order = ['white', 'yellow', 'black', 'green', 'blue'];
+
+      order.forEach(id => {
+        const hat = HATS_META[id];
+        const assigned = roomData.assignments[id] || [];
+        const quota = roomData.quotas[id] || (id === 'blue' ? 1 : 4);
+        totalAssigned += assigned.length;
+
+        const col = document.createElement('div');
+        col.className = 'light-card rounded-2xl p-4 flex flex-col hover:border-slate-400 transition-all cursor-pointer group';
+        col.onclick = () => openHatQuestions(id);
+
+        col.innerHTML = `
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-lg ${hat.badgeClass} flex items-center justify-center text-base shadow-sm">
+                <i class="ph-bold ${hat.icon}"></i>
+              </div>
+              <h4 class="font-bold text-sm text-slate-800">${hat.name}</h4>
+            </div>
+            <span class="text-xs font-black ${assigned.length >= quota ? 'text-amber-600' : 'text-slate-500'}">
+              ${assigned.length}/${quota}
+            </span>
+          </div>
+
+          <p class="text-[11px] text-slate-500 line-clamp-1 mb-2 font-medium">${hat.subtitle}</p>
+
+          <div class="text-[11px] text-indigo-600 font-bold flex items-center gap-1 mb-3 group-hover:underline">
+            <i class="ph-bold ph-list-magnifying-glass"></i>
+            <span>Асуулт, зорилго харах[cite: 1]</span>
+          </div>
+
+          <!-- СУРАГЧДЫН НЭРСИЙН ЖАГСААЛТ (ШУУД ХАРАГДАНА) -->
+          <div class="flex-1 bg-slate-50 rounded-xl p-2 min-h-[140px] space-y-1.5 border border-slate-200">
+            ${assigned.length === 0 ? '<div class="text-[11px] text-slate-400 text-center py-4 font-medium">Сурагч ороогүй</div>' : ''}
+            ${assigned.map(name => `
+              <div class="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-white text-slate-800 border border-slate-200 flex items-center gap-1.5 shadow-sm">
+                <i class="ph-bold ph-user text-[11px] text-indigo-500"></i>
+                <span class="truncate">${name}</span>
+              </div>
+            `).join('')}
+          </div>
+        `;
+        container.appendChild(col);
+      });
+
+      document.getElementById('dashboardStats').textContent = `Хуваарилагдсан: ${totalAssigned} / ${roomData.total}`;
+    }
+
+    function resetRoomData() {
+      if (confirm('Бүх сурагчдын хуваарилалтыг цэвэрлэж, дахин сугалахад бэлтгэх үү?')) {
+        const fair = generateFairPool(roomData.total);
+        roomData.assignments = { blue: [], white: [], black: [], yellow: [], green: [] };
+        roomData.availablePool = fair.pool;
+        saveRoomStateToStorage();
+        renderTeacherHatsGrid();
+      }
+    }
+
+    // ================== TIMER ==================
+    let timerDuration = 300;
+    let timerRemaining = 300;
+    let timerInterval = null;
+    let isTimerRunning = false;
+
+    function formatTime(seconds) {
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+    }
+
+    function updateTimerDisplay() {
+      document.getElementById('timerDisplay').innerHTML = `
+        <i class="ph-bold ph-timer text-indigo-600 text-lg"></i>
+        <span>${formatTime(timerRemaining)}</span>
+      `;
+    }
+
+    function startTimer(minutes) {
+      clearInterval(timerInterval);
+      isTimerRunning = false;
+      timerDuration = minutes * 60;
+      timerRemaining = timerDuration;
+      updateTimerDisplay();
+      toggleTimer();
+    }
+
+    function toggleTimer() {
+      AudioEngine.init();
+      const btn = document.getElementById('timerControlBtn');
+      if (isTimerRunning) {
+        clearInterval(timerInterval);
+        isTimerRunning = false;
+        btn.textContent = 'Үргэлжлүүлэх';
+        btn.className = 'text-[11px] font-bold px-2.5 py-1 rounded bg-amber-600 text-white hover:bg-amber-700';
+      } else {
+        isTimerRunning = true;
+        btn.textContent = 'Зогсоох';
+        btn.className = 'text-[11px] font-bold px-2.5 py-1 rounded bg-rose-600 text-white hover:bg-rose-700';
+        timerInterval = setInterval(() => {
+          if (timerRemaining > 0) {
+            timerRemaining--;
+            updateTimerDisplay();
+            if (timerRemaining <= 5 && timerRemaining > 0) {
+              AudioEngine.tick();
+            }
+          } else {
+            clearInterval(timerInterval);
+            isTimerRunning = false;
+            btn.textContent = 'Дууссан';
+            btn.className = 'text-[11px] font-bold px-2.5 py-1 rounded bg-slate-600 text-white';
+            AudioEngine.alarm();
+            alert('Цаг дууслаа!');
+          }
+        }, 1000);
+      }
+    }
+
+    function resetTimer() {
+      clearInterval(timerInterval);
+      isTimerRunning = false;
+      timerRemaining = timerDuration;
+      updateTimerDisplay();
+      const btn = document.getElementById('timerControlBtn');
+      btn.textContent = 'Эхлэх';
+      btn.className = 'text-[11px] font-bold px-2.5 py-1 rounded bg-indigo-600 text-white hover:bg-indigo-700';
+    }
+
+    // ================== STUDENT DEVICE ==================
+    function showStudentJoin() {
+      switchView('viewStudentJoin');
+    }
+
+    function connectStudentToRoom() {
+      const code = document.getElementById('joinRoomCode').value.trim();
+      const name = document.getElementById('joinStudentName').value.trim();
+
+      if (!code || code.length !== 4) {
+        alert('Өрөөний 4 оронтой кодыг оруулна уу!');
+        return;
+      }
+      if (!name) {
+        alert('Нэрээ оруулна уу!');
+        return;
+      }
+
+      currentRole = 'student';
+      currentRoomCode = code;
+      currentStudentName = name;
+
+      loadRoomStateFromStorage();
+
+      document.getElementById('deviceStudentNameDisplay').textContent = name;
+      document.getElementById('deviceRoomCodeDisplay').textContent = `Өрөө: ${code}`;
+
+      let alreadyHat = null;
+      for (const [hId, names] of Object.entries(roomData.assignments)) {
+        if (names.includes(name)) {
+          alreadyHat = hId;
+          break;
+        }
+      }
+
+      if (alreadyHat) {
+        displayStudentResult(alreadyHat);
+      } else {
+        showStudentWheel();
+      }
+
+      switchView('viewStudentDevice');
+    }
+
+    function getRemainingHatTypes() {
+      loadRoomStateFromStorage();
+      const unique = [];
+      (roomData.availablePool || []).forEach(h => {
+        if (!unique.includes(h)) unique.push(h);
+      });
+      return unique;
+    }
+
+    let sCanvas = null;
+    let sCtx = null;
+    let sRotation = 0;
+    let sIsSpinning = false;
+
+    function showStudentWheel() {
+      document.getElementById('studentSpinArea').classList.remove('hidden');
+      document.getElementById('studentResultArea').classList.add('hidden');
+      
+      sCanvas = document.getElementById('studentWheelCanvas');
+      sCtx = sCanvas.getContext('2d');
+      drawStudentWheel();
+    }
+
+    function drawStudentWheel() {
+      if (!sCanvas || !sCtx) return;
+      const w = sCanvas.width;
+      const center = w / 2;
+      const radius = center - 8;
+      sCtx.clearRect(0, 0, w, w);
+
+      const available = getRemainingHatTypes();
+
+      if (available.length === 0) {
+        sCtx.save();
+        sCtx.beginPath();
+        sCtx.arc(center, center, radius, 0, 2 * Math.PI);
+        sCtx.fillStyle = '#f8fafc';
+        sCtx.fill();
+        sCtx.strokeStyle = '#cbd5e1';
+        sCtx.stroke();
+        sCtx.fillStyle = '#64748b';
+        sCtx.font = 'bold 15px "Roboto", "Noto Sans", sans-serif';
+        sCtx.textAlign = 'center';
+        sCtx.textBaseline = 'middle';
+        sCtx.fillText('Бүх сурагчид хуваарилагдсан!', center, center);
+        sCtx.restore();
+        return;
+      }
+
+      const slice = (2 * Math.PI) / available.length;
+
+      sCtx.save();
+      sCtx.translate(center, center);
+      sCtx.rotate(sRotation);
+
+      available.forEach((id, i) => {
+        const start = i * slice;
+        const end = start + slice;
+        const hat = HATS_META[id];
+
+        sCtx.beginPath();
+        sCtx.moveTo(0, 0);
+        sCtx.arc(0, 0, radius, start, end);
+        sCtx.closePath();
+        sCtx.fillStyle = hat.color;
+        sCtx.fill();
+        sCtx.lineWidth = 2;
+        sCtx.strokeStyle = hat.strokeColor || '#ffffff';
+        sCtx.stroke();
+
+        sCtx.save();
+        sCtx.rotate(start + slice / 2);
+        sCtx.textAlign = 'right';
+        sCtx.textBaseline = 'middle';
+        sCtx.fillStyle = hat.textColor || '#ffffff';
+        sCtx.font = 'bold 14px "Roboto", "Noto Sans", sans-serif';
+        sCtx.fillText(hat.name, radius - 20, 0);
+        sCtx.restore();
+      });
+
+      sCtx.restore();
+    }
+
+    function studentExecuteSpin() {
+      AudioEngine.init();
+      if (sIsSpinning) return;
+
+      loadRoomStateFromStorage();
+      if (!roomData.availablePool || roomData.availablePool.length === 0) {
+        alert('Бүх орон тоо дүүрсэн байна!');
+        return;
+      }
+
+      const available = getRemainingHatTypes();
+      if (available.length === 0) {
+        alert('Бүх багуудын квот дүүрсэн байна!');
+        return;
+      }
+
+      sIsSpinning = true;
+      document.getElementById('studentSpinBtn').disabled = true;
+
+      // Урьдчилан тэнцвэржүүлсэн сангаас сугалж авна
+      const poolIndex = Math.floor(Math.random() * roomData.availablePool.length);
+      const winnerHat = roomData.availablePool[poolIndex];
+
+      const winnerVisualIdx = available.indexOf(winnerHat);
+      const slice = (2 * Math.PI) / available.length;
+      const targetAngle = (3 * Math.PI / 2) - (winnerVisualIdx * slice + slice / 2);
+      const extra = (5 + Math.floor(Math.random() * 3)) * (2 * Math.PI);
+      const currentNorm = sRotation % (2 * Math.PI);
+      const totalDelta = extra + (targetAngle - currentNorm);
+
+      const startTime = performance.now();
+      const duration = 3600;
+      const startRot = sRotation;
+      let lastTickAngle = 0;
+
+      function anim(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const ease = 1 - Math.pow(1 - progress, 3);
+        sRotation = startRot + totalDelta * ease;
+
+        if (Math.abs(sRotation - lastTickAngle) > (slice * 0.7)) {
+          AudioEngine.tick();
+          lastTickAngle = sRotation;
+        }
+
+        drawStudentWheel();
+
+        if (progress < 1) {
+          requestAnimationFrame(anim);
+        } else {
+          sIsSpinning = false;
+          document.getElementById('studentSpinBtn').disabled = false;
+
+          // Сангаас уг өнгийг 1-ээр хасч, сурагчийн нэрэнд оноож хадгална
+          loadRoomStateFromStorage();
+          const removeIdx = roomData.availablePool.indexOf(winnerHat);
+          if (removeIdx !== -1) {
+            roomData.availablePool.splice(removeIdx, 1);
+          }
+
+          if (!roomData.assignments[winnerHat].includes(currentStudentName)) {
+            roomData.assignments[winnerHat].push(currentStudentName);
+          }
+          saveRoomStateToStorage();
+
+          AudioEngine.win();
+          confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
+
+          displayStudentResult(winnerHat);
+        }
+      }
+      requestAnimationFrame(anim);
+    }
+
+    function displayStudentResult(hatId) {
+      currentAssignedHat = hatId;
+      const hat = HATS_META[hatId];
+
+      document.getElementById('studentSpinArea').classList.add('hidden');
+      const resArea = document.getElementById('studentResultArea');
+      resArea.classList.remove('hidden');
+
+      const badge = document.getElementById('studentResultBadge');
+      badge.className = `w-20 h-20 rounded-3xl flex items-center justify-center text-4xl mb-3 shadow-md ${hat.badgeClass}`;
+      document.getElementById('studentResultIcon').className = `ph-bold ${hat.icon}`;
+
+      document.getElementById('studentResultHatName').textContent = hat.name;
+      document.getElementById('studentResultSubtitle').textContent = hat.subtitle;
+    }
+
+    // ================== GUIDE QUESTIONS MODAL & ХАРИУЛТ БИЧИХ ТАЛБАР ==================
+    function openHatQuestions(hatId) {
+      const hat = HATS_META[hatId];
+      if (!hat) return;
+
+      activeModalHatId = hatId;
+      const modal = document.getElementById('guideQuestionsModal');
+      const badgeIcon = document.getElementById('modalHatIcon');
+      
+      badgeIcon.className = `w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-sm ${hat.badgeClass}`;
+      badgeIcon.innerHTML = `<i class="ph-bold ${hat.icon}"></i>`;
+
+      document.getElementById('modalHatTitle').textContent = hat.name;
+      document.getElementById('modalHatSubtitle').textContent = hat.subtitle;
+      document.getElementById('modalGoalText').textContent = hat.goal;
+
+      // Хадгалсан хариултуудыг ачаалах
+      const savedAnswers = JSON.parse(localStorage.getItem(`answers_${currentRoomCode}_${hatId}`) || '{}');
+
+      const list = document.getElementById('modalQuestionsList');
+      list.innerHTML = '';
+
+      hat.questions.forEach((q, idx) => {
+        const item = document.createElement('div');
+        item.className = 'bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-2';
+        
+        const answerVal = savedAnswers[`q_${idx}`] || '';
+
+        item.innerHTML = `
+          <div class="flex items-start gap-2.5">
+            <div class="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-700 font-bold text-xs flex items-center justify-center shrink-0 border border-indigo-200 mt-0.5">
+              ${idx + 1}
+            </div>
+            <p class="text-xs md:text-sm text-slate-800 font-bold leading-relaxed">${q}</p>
+          </div>
+          
+          <div class="pl-8 pt-1">
+            <textarea id="answerInput_${idx}" rows="2" placeholder="Энд багийнхаа хариулт, дүгнэлтийг бичнэ үү..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs md:text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none resize-none transition-all">${answerVal}</textarea>
+          </div>
+        `;
+        list.appendChild(item);
+      });
+
+      document.getElementById('saveStatusNote').textContent = 'Хариултаа бичээд хадгална уу.';
+      modal.classList.remove('hidden');
+    }
+
+    function saveStudentAnswers() {
+      if (!activeModalHatId) return;
+
+      const answers = {};
+      const hat = HATS_META[activeModalHatId];
+
+      hat.questions.forEach((_, idx) => {
+        const field = document.getElementById(`answerInput_${idx}`);
+        if (field) {
+          answers[`q_${idx}`] = field.value.trim();
+        }
+      });
+
+      localStorage.setItem(`answers_${currentRoomCode}_${activeModalHatId}`, JSON.stringify(answers));
+
+      const status = document.getElementById('saveStatusNote');
+      status.textContent = '✅ Хариулт амжилттай хадгалагдлаа!';
+      setTimeout(() => {
+        status.textContent = 'Хариултаа бичээд хадгална уу.';
+      }, 3000);
+    }
+
+    function closeQuestionsModal() {
+      document.getElementById('guideQuestionsModal').classList.add('hidden');
+      activeModalHatId = null;
+    }
+
+    // ================== SYNC / BROADCAST ==================
+    const channel = new BroadcastChannel('thinking_hats_classroom_channel');
+
+    channel.onmessage = (event) => {
+      if (event.data && event.data.roomCode === currentRoomCode) {
+        roomData = event.data.roomData;
+        onRoomDataChanged();
+      }
+    };
+
+    function saveRoomStateToStorage() {
+      if (!currentRoomCode) return;
+      const payload = { roomCode: currentRoomCode, roomData };
+      localStorage.setItem(`hats_room_${currentRoomCode}`, JSON.stringify(roomData));
+      channel.postMessage(payload);
+    }
+
+    function loadRoomStateFromStorage() {
+      if (!currentRoomCode) return;
+      const raw = localStorage.getItem(`hats_room_${currentRoomCode}`);
+      if (raw) {
+        try {
+          roomData = JSON.parse(raw);
+        } catch(e) {}
+      }
+    }
+
+    function onRoomDataChanged() {
+      if (currentRole === 'teacher') {
+        renderTeacherHatsGrid();
+      } else if (currentRole === 'student') {
+        drawStudentWheel();
+      }
+    }
+
+    window.addEventListener('storage', (e) => {
+      if (e.key === `hats_room_${currentRoomCode}` && e.newValue) {
+        try {
+          roomData = JSON.parse(e.newValue);
+          onRoomDataChanged();
+        } catch(err) {}
+      }
+    });
+
+    document.fonts.ready.then(() => {
+      if (sCanvas && sCtx) {
+        drawStudentWheel();
+      }
+    });
+  </script>
+</body>
+</html>
